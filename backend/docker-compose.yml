@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: devhire-postgres
+    environment:
+      POSTGRES_DB: devhire
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: devyashah_6869
+    ports:
+      - "5433:5432"
+    volumes:
+      - devhire_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d devhire"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: devhire-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/devhire
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: devyashah_6869
+      JWT_SECRET: ${JWT_SECRET}
+      AI_API_KEY: ${AI_API_KEY}
+      AI_MODEL: ${AI_MODEL:-gemini-3.8-flash}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: devhire-frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  devhire_pgdata:
