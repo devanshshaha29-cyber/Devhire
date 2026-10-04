@@ -1,11 +1,15 @@
 import axios from "axios";
 
+const isLocalhost =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1";
+
+const API_BASE_URL = isLocalhost
+  ? "http://localhost:8080"
+  : "https://devhire-production-1553.up.railway.app";
+
 const apiClient = axios.create({
-  baseURL:
-    import.meta.env.VITE_API_BASE_URL ||
-    (import.meta.env.DEV
-      ? "http://localhost:8080"
-      : "https://devhire-production-1553.up.railway.app"),
+  baseURL: API_BASE_URL,
 });
 
 apiClient.interceptors.request.use(
@@ -27,7 +31,6 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem("devhire_token");
-
       window.location.href = "/login";
     }
 
