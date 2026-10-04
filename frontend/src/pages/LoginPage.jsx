@@ -41,7 +41,10 @@ function LoginPage() {
       navigate("/dashboard");
     } catch (err) {
       console.error(err);
-      setError("Invalid email or password");
+      setError(
+        err.response?.data?.message ||
+          "Login failed. Please check your email and password.",
+      );
     } finally {
       setLoading(false);
     }
