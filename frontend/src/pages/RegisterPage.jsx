@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import apiClient from "../services/apiClient";
 
 function RegisterPage() {
   const navigate = useNavigate();
@@ -32,8 +32,8 @@ function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await axios.post(
-        "http://localhost:8080/api/auth/register",
+      const response = await apiClient.post(
+        "/api/auth/register",
         formData,
       );
 
