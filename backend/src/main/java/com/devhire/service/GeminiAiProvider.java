@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -25,6 +26,9 @@ public class GeminiAiProvider implements AiProvider {
 
     @Value("${ai.model}")
     private String model;
+
+    @Value("${ai.fallback-model:gemini-3.5-flash-lite}")
+    private String fallbackModel;
 
     public GeminiAiProvider(ObjectMapper objectMapper) {
 
@@ -178,35 +182,31 @@ public class GeminiAiProvider implements AiProvider {
 
         try {
 
-            Map<String, Object> responseFormat =
-                    Map.of(
-                            "type", "text",
-                            "mime_type", "application/json",
-                            "schema", schema
-                    );
+            JsonNode response;
 
-            Map<String, Object> requestBody =
-                    Map.of(
-                            "model", model,
-                            "input", prompt,
-                            "response_format", responseFormat,
-                            "store", false
-                    );
+            try {
+                response = performGeminiRequest(
+                        model,
+                        prompt,
+                        schema
+                );
+            } catch (RestClientResponseException exception) {
 
-            JsonNode response =
-                    restClient
-                            .post()
-                            .uri("/interactions")
-                            .header(
-                                    "x-goog-api-key",
-                                    apiKey
-                            )
-                            .contentType(
-                                    MediaType.APPLICATION_JSON
-                            )
-                            .body(requestBody)
-                            .retrieve()
-                            .body(JsonNode.class);
+                if (
+                        exception.getStatusCode().value() == 503 &&
+                        fallbackModel != null &&
+                        !fallbackModel.isBlank() &&
+                        !fallbackModel.equals(model)
+                ) {
+                    response = performGeminiRequest(
+                            fallbackModel,
+                            prompt,
+                            schema
+                    );
+                } else {
+                    throw exception;
+                }
+            }
 
             String jsonText =
                     findOutputText(response);
@@ -224,6 +224,42 @@ public class GeminiAiProvider implements AiProvider {
                     exception
             );
         }
+    }
+
+    private JsonNode performGeminiRequest(
+            String selectedModel,
+            String prompt,
+            Map<String, Object> schema
+    ) {
+
+        Map<String, Object> responseFormat =
+                Map.of(
+                        "type", "text",
+                        "mime_type", "application/json",
+                        "schema", schema
+                );
+
+        Map<String, Object> requestBody =
+                Map.of(
+                        "model", selectedModel,
+                        "input", prompt,
+                        "response_format", responseFormat,
+                        "store", false
+                );
+
+        return restClient
+                .post()
+                .uri("/interactions")
+                .header(
+                        "x-goog-api-key",
+                        apiKey
+                )
+                .contentType(
+                        MediaType.APPLICATION_JSON
+                )
+                .body(requestBody)
+                .retrieve()
+                .body(JsonNode.class);
     }
 
     private Map<String, Object> createSkillSchema() {
