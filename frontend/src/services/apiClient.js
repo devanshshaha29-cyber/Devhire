@@ -1,15 +1,7 @@
 import axios from "axios";
 
-const isLocalhost =
-  window.location.hostname === "localhost" ||
-  window.location.hostname === "127.0.0.1";
-
-const API_BASE_URL = isLocalhost
-  ? "http://localhost:8080"
-  : "https://devhire-production-1553.up.railway.app";
-
 const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: "https://devhire-production-1553.up.railway.app",
 });
 
 apiClient.interceptors.request.use(
